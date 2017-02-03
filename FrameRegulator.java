@@ -1,4 +1,5 @@
 import javafx.scene.canvas.*; 
+import javafx.scene.paint.*;
 import java.util.Deque;
 import java.util.ArrayDeque;
 
@@ -10,7 +11,7 @@ public class FrameRegulator
     private Long tick = 0L;
     private double frameLength = 0;
 
-    public void updateFPS(long now, GraphicsContext gc)
+    public void updateFPS(long now, GraphicsContext gc, boolean displayFPS)
     {
         frameCounter += 1;
         Long tock = now / 1000000;
@@ -22,7 +23,11 @@ public class FrameRegulator
             Long total = 0L;
             for(Long x : frameLengths) total += Math.round(1000.0 / x);
             Long fps = total / frameLengths.size();
-            gc.strokeText("Frame " + frameCounter.toString() + " | " + fps.toString() + " FPS", 800, 20);
+            if (displayFPS) {
+                gc.setStroke(Color.WHITE);
+                gc.setLineWidth(1);    
+                gc.strokeText("Frame " + frameCounter.toString() + " | " + fps.toString() + " FPS", 800, 20);
+            }
         }
         tick = tock;
     }

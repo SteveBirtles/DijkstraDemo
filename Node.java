@@ -37,9 +37,15 @@ public class Node
         if (x < minX) minX = x;
         if (y < minY) minY = y;
 
-        if (Application.WRAP) {
-            if (x < Application.WINDOW_WIDTH/2 - Application.NODE_RADIUS) x += Application.WINDOW_WIDTH + Application.NODE_RADIUS*2;
-            if (y < Application.WINDOW_HEIGHT/2 - Application.NODE_RADIUS) y += Application.WINDOW_HEIGHT + Application.NODE_RADIUS*2;
+        if (Application.BOUNCE) {
+            if ((x < -Application.WINDOW_WIDTH/2 + Application.NODE_RADIUS) && dx < 0) dx = -dx;
+            if ((y < -Application.WINDOW_HEIGHT/2 + Application.NODE_RADIUS) && dy < 0) dy = -dy;
+            if ((x > Application.WINDOW_WIDTH/2 - Application.NODE_RADIUS) && dx > 0) dx = -dx;
+            if ((y > Application.WINDOW_HEIGHT/2 - Application.NODE_RADIUS) && dy > 0) dy = -dy;
+        }
+        else if (Application.WRAP) {
+            if (x < -Application.WINDOW_WIDTH/2 - Application.NODE_RADIUS) x += Application.WINDOW_WIDTH + Application.NODE_RADIUS*2;
+            if (y < -Application.WINDOW_HEIGHT/2 - Application.NODE_RADIUS) y += Application.WINDOW_HEIGHT + Application.NODE_RADIUS*2;
             if (x > Application.WINDOW_WIDTH/2 + Application.NODE_RADIUS) x -= Application.WINDOW_WIDTH + Application.NODE_RADIUS*2;
             if (y > Application.WINDOW_HEIGHT/2 + Application.NODE_RADIUS) y -= Application.WINDOW_HEIGHT + Application.NODE_RADIUS*2;
         }

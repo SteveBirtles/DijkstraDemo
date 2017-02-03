@@ -19,13 +19,16 @@ import java.util.Collections;
 
 public class Application {
 
-    public static final int WINDOW_WIDTH = 1024;
-    public static final int WINDOW_HEIGHT = 768;
-    public static final boolean WRAP = true;
+    public static final int WINDOW_WIDTH = 1280;
+    public static final int WINDOW_HEIGHT = 1024;
 
     public static final double NODE_RADIUS = 15;
-    public static final int NODE_COUNT = 30;
+    public static final int NODE_COUNT = 50;
     public static final int JOIN_COUNT = 5;
+
+    public static final boolean BOUNCE = true;
+    public static final boolean WRAP = false;
+    public static final boolean SCALE = false;
 
     static HashSet<KeyCode> keysPressed = new HashSet<>();
 
@@ -48,6 +51,7 @@ public class Application {
 
         stage.setTitle("JavaFX Canvas Demo");
         stage.setResizable(false);
+        stage.setFullScreen(true);
         stage.setScene(scene);                        
         stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
                 public void handle(WindowEvent we) {
@@ -57,7 +61,7 @@ public class Application {
             });
         stage.show(); 
         stage.setWidth(WINDOW_WIDTH);
-        stage.setHeight(WINDOW_HEIGHT);
+        stage.setHeight(WINDOW_HEIGHT);        
 
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> keysPressed.add(event.getCode()));
         scene.addEventFilter(KeyEvent.KEY_RELEASED, event -> keysPressed.remove(event.getCode()));
@@ -82,13 +86,28 @@ public class Application {
             public void handle(long now) {
 
                 double scale;
-                if (WRAP) scale = 1;
-                else scale = 1/Math.sqrt(Math.pow((Node.maxX - Node.minX)/1280,2) + Math.pow((Node.maxY - Node.minY)/1280,2));                
+                if (SCALE) scale = 1/Math.sqrt(Math.pow((Node.maxX - Node.minX)/1280,2) + Math.pow((Node.maxY - Node.minY)/1280,2));                
+                else scale = 1;
 
                 /* INPUT */
 
                 for(KeyCode k : keysPressed) {
-                    if (k == KeyCode.ESCAPE) Application.terminate();                        
+                    if (k == KeyCode.ESCAPE) Application.terminate();
+
+                    if (k == KeyCode.SPACE) {
+                        nodeList.clear();
+                        for (int i = 0; i < nodeArray.length; i++) {
+                            nodeArray[i] = new Node(rnd.nextDouble()*WINDOW_WIDTH - WINDOW_WIDTH/2, rnd.nextDouble()*WINDOW_HEIGHT - WINDOW_HEIGHT/2, 0, 0);
+                            nodeList.add(nodeArray[i]);                             
+                        }
+                    }
+
+                    if (k == KeyCode.ENTER) {
+                        for (int i = 0; i < nodeArray.length; i++) {
+                            nodeArray[i].dx = rnd.nextDouble()*100-50;
+                            nodeArray[i].dy = rnd.nextDouble()*100-50;                            
+                        }
+                    }
                 }
 
                 /* PROCESS */
@@ -196,12 +215,10 @@ public class Application {
                     else gc.strokeText("∞", n.x*scale + centreX, n.y*scale + centreY);                    
                 }    
 
-                gc.setStroke(Color.WHITE);
-                gc.setLineWidth(1);    
-                fr.updateFPS(now, gc);
-
+                fr.updateFPS(now, gc, false);
             }
-        }.start();
+        }.
+        start();
 
     }
 
