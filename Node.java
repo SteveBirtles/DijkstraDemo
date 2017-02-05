@@ -9,6 +9,7 @@ public class Node
     public static double minY;   
 
     public double value;
+    public double heuristicValue;
     public boolean checked;
 
     public double x;
@@ -26,6 +27,7 @@ public class Node
         edges = new HashMap<Node, Boolean>();
         this.value = Double.MAX_VALUE;     
         this.checked = false;
+        this.heuristicValue = 0;
     }
 
     public void update(double framelength) {

@@ -19,16 +19,23 @@ import java.util.Collections;
 
 public class Application {
 
-    public static final int WINDOW_WIDTH = 1280;
-    public static final int WINDOW_HEIGHT = 1024;
+    public static final int WINDOW_WIDTH = 1920;
+    public static final int WINDOW_HEIGHT = 1080;
 
     public static final double NODE_RADIUS = 15;
-    public static final int NODE_COUNT = 50;
-    public static final int JOIN_COUNT = 5;
+    public static final int NODE_COUNT = 49;
+    public static final int JOIN_COUNT = 8;    
 
     public static final boolean BOUNCE = true;
     public static final boolean WRAP = false;
     public static final boolean SCALE = false;
+
+    public static boolean ASTAR = false;
+    public static boolean GRID = true;
+    public static final double MAX_GRID_DISTANCE = 300;
+
+    public static Node[] nodeArray = new Node[NODE_COUNT];
+    public static ArrayList<Node> nodeList = new ArrayList<>();
 
     static HashSet<KeyCode> keysPressed = new HashSet<>();
 
@@ -37,12 +44,32 @@ public class Application {
         Platform.runLater(() -> start());               
     }
 
+    public static void resetNodes() {    
+        nodeList.clear();
+        Random rnd = new Random();
+        if (GRID) {
+            int i = 0;
+            for (double x = -3; x <= 3; x++) {
+                for (double y = -3; y <= 3; y++) {                      
+                    nodeArray[i] = new Node(x*WINDOW_WIDTH/9, y*WINDOW_HEIGHT/7, 0, 0);
+                    nodeList.add(nodeArray[i]);                             
+                    i++;
+                }
+            }
+        }        
+        else {
+            for (int i = 0; i < nodeArray.length; i++) {
+                nodeArray[i] = new Node(rnd.nextDouble()*WINDOW_WIDTH - WINDOW_WIDTH/2, rnd.nextDouble()*WINDOW_HEIGHT - WINDOW_HEIGHT/2, rnd.nextDouble()*100-50, rnd.nextDouble()*100-50);
+                nodeList.add(nodeArray[i]);                             
+            }
+        }
+    }
+
     private static void start() {
 
         System.out.println("Application Starting...");
 
         FrameRegulator fr = new FrameRegulator();
-        Random rnd = new Random();
 
         Group root = new Group();
         Stage stage = new Stage();
@@ -74,13 +101,7 @@ public class Application {
         gc.setStroke(Color.WHITE);
         gc.setFont(new Font("Arial", 14));       
 
-        Node[] nodeArray = new Node[NODE_COUNT];
-        ArrayList<Node> nodeList = new ArrayList<>();
-        for (int i = 0; i < nodeArray.length; i++) {
-            nodeArray[i] = new Node(rnd.nextDouble()*WINDOW_WIDTH - WINDOW_WIDTH/2, rnd.nextDouble()*WINDOW_HEIGHT - WINDOW_HEIGHT/2, rnd.nextDouble()*100-50, rnd.nextDouble()*100-50);
-            nodeList.add(nodeArray[i]);                             
-        }
-
+        resetNodes();
         new AnimationTimer() {
             @Override
             public void handle(long now) {
@@ -95,39 +116,45 @@ public class Application {
                     if (k == KeyCode.ESCAPE) Application.terminate();
 
                     if (k == KeyCode.SPACE) {
-                        nodeList.clear();
-                        for (int i = 0; i < nodeArray.length; i++) {
-                            nodeArray[i] = new Node(rnd.nextDouble()*WINDOW_WIDTH - WINDOW_WIDTH/2, rnd.nextDouble()*WINDOW_HEIGHT - WINDOW_HEIGHT/2, 0, 0);
-                            nodeList.add(nodeArray[i]);                             
-                        }
+                        resetNodes();
                     }
 
+                    if (k == KeyCode.A) { ASTAR = true; }
+                    if (k == KeyCode.D) { ASTAR = false; }
+                    if (k == KeyCode.G) { GRID = true; }
+                    if (k == KeyCode.R) { GRID = false; }
+
                     if (k == KeyCode.ENTER) {
+                        Random rnd = new Random();
                         for (int i = 0; i < nodeArray.length; i++) {
                             nodeArray[i].dx = rnd.nextDouble()*100-50;
-                            nodeArray[i].dy = rnd.nextDouble()*100-50;                            
+                            nodeArray[i].dy = rnd.nextDouble()*100-50;                  
+
                         }
                     }
                 }
 
                 /* PROCESS */
-
                 for (Node node : nodeList) {
                     node.update(fr.getFrameLength());
-                    node.edges.clear();
+                    if (!GRID) node.edges.clear();
                 }
 
-                ArrayList<Double> distances = new ArrayList<>();                
-                for (Node node : nodeList) {
-                    distances.clear();
-                    for (Node other : nodeList) {
-                        if (node == other) continue;
-                        distances.add(Node.distance(node, other));
-                    }
-                    Collections.sort(distances);
-                    for (Node other : nodeList) {
-                        if (Node.distance(node, other) < distances.get(JOIN_COUNT - 1)) {
-                            node.addEdge(other);
+                if (!GRID) {
+                    ArrayList<Double> distances = new ArrayList<>();                
+                    for (Node node : nodeList) {
+                        distances.clear();
+                        for (Node other : nodeList) {
+                            if (node == other) continue;
+                            double d = Node.distance(node, other);
+                            distances.add(d);
+                        }
+                        Collections.sort(distances);
+                        for (Node other : nodeList) {
+                            double d = Node.distance(node, other);
+                            if (d <= distances.get(JOIN_COUNT - 1)) {
+                                node.addEdge(other);
+                            }
                         }
                     }
                 }
@@ -135,30 +162,55 @@ public class Application {
                 for (Node node : nodeList) {
                     node.checked = false;
                     node.value = Double.MAX_VALUE;
+                    node.heuristicValue = Node.distance(node, nodeArray[0]);
                 }
                 nodeArray[0].value = 0;
-
                 Node node = nodeArray[0];
-                do {
-                    for (Node child : node.edges.keySet()) {
-                        if (!child.checked) {
-                            double d = node.value + Node.distance(node, child);
-                            if (d < child.value) {
-                                child.value = d;                                        
+
+                if (ASTAR) {
+                    do {
+                        for (Node child : node.edges.keySet()) {
+                            if (!child.checked) {
+                                double d = node.value + Node.distance(node, child);
+                                if (d < child.value) {
+                                    child.value = d;                                        
+                                }
                             }
                         }
-                    }
-                    node.checked = true;
-                    node = null;
-                    double lowestValue = Double.MAX_VALUE;
-                    for (Node nextNode : nodeList) {                        
-                        if (!nextNode.checked && nextNode.value < lowestValue) {
-                            node = nextNode;
-                            lowestValue = nextNode.value;
-                        }
-                    }    
+                        node.checked = true;
+                        node = null;
+                        double lowestValue = Double.MAX_VALUE;
+                        for (Node nextNode : nodeList) {                        
+                            if (!nextNode.checked && nextNode.value + nextNode.heuristicValue < lowestValue) {
+                                node = nextNode;
+                                lowestValue = nextNode.value + nextNode.heuristicValue;
+                            }
+                        }    
 
-                } while (node != null);
+                    } while (node != nodeArray[nodeArray.length - 1]);
+                }
+                else {
+                    do {
+                        for (Node child : node.edges.keySet()) {
+                            if (!child.checked) {
+                                double d = node.value + Node.distance(node, child);
+                                if (d < child.value) {
+                                    child.value = d;                                        
+                                }
+                            }
+                        }
+                        node.checked = true;
+                        node = null;
+                        double lowestValue = Double.MAX_VALUE;
+                        for (Node nextNode : nodeList) {                        
+                            if (!nextNode.checked && nextNode.value < lowestValue) {
+                                node = nextNode;
+                                lowestValue = nextNode.value;
+                            }
+                        }    
+
+                    } while (node != null);
+                }
 
                 HashMap<Node, Node> path = new HashMap<>();
                 node = nodeArray[nodeArray.length - 1];
@@ -207,17 +259,46 @@ public class Application {
                     if (n == nodeArray[0]) gc.setFill(Color.LIME);
                     else if (n == nodeArray[nodeArray.length - 1]) gc.setFill(Color.RED);   
                     else if (path.containsKey(n)) gc.setFill(Color.YELLOW);
+                    else if (n.checked && ASTAR) gc.setFill(Color.CYAN);
                     else gc.setFill(Color.BLUE);
                     gc.fillOval(n.x*scale-NODE_RADIUS*scale + centreX, n.y*scale-NODE_RADIUS*scale + centreY, NODE_RADIUS*2*scale, NODE_RADIUS*2*scale);
                     gc.setStroke(Color.WHITE);
                     gc.setLineWidth(1);
-                    if (n.value != Double.MAX_VALUE) gc.strokeText(Integer.toString((int) n.value), n.x*scale + centreX, n.y*scale + centreY);
-                    else gc.strokeText("∞", n.x*scale + centreX, n.y*scale + centreY);                    
+                    if (n.value != Double.MAX_VALUE) {
+                        gc.strokeText(Integer.toString((int) n.value), n.x*scale + centreX, n.y*scale + centreY);
+                        if (ASTAR) {
+                            gc.setStroke(Color.YELLOW);
+                            gc.strokeText(Integer.toString((int) (n.value + n.heuristicValue)), n.x*scale + centreX, n.y*scale + centreY - 20);
+                        }
+                    }
+                    else {
+                        gc.strokeText("∞", n.x*scale + centreX, n.y*scale + centreY); 
+                    }
+                    if (ASTAR) {
+
+                        gc.setStroke(Color.LIME);
+                        gc.strokeText(Integer.toString((int) n.heuristicValue), n.x*scale + centreX, n.y*scale + centreY + 20);
+                    }
                 }    
+
+                gc.setStroke(Color.WHITE);
+                gc.setLineWidth(1);    
+                if (GRID) {
+                    gc.strokeText("[G/R] GRID", 20, 20);
+                } else {
+                    gc.strokeText("[G/R] RANDOM", 20, 20);
+                }
+
+                if (ASTAR) {
+                    gc.strokeText("[A/D] A STAR", 20, 40);
+                } else {
+                    gc.strokeText("[A/D] DIJKSTRA", 20, 40);
+                }
 
                 fr.updateFPS(now, gc, false);
             }
         }.
+
         start();
 
     }
