@@ -31,7 +31,7 @@ public class Application {
     public static final boolean SCALE = false;
 
     public static boolean ASTAR = false;
-    public static boolean GRID = true;
+    public static boolean GRID = false;
     public static final double MAX_GRID_DISTANCE = 300;
 
     public static Node[] nodeArray = new Node[NODE_COUNT];
@@ -44,14 +44,14 @@ public class Application {
         Platform.runLater(() -> start());               
     }
 
-    public static void resetNodes() {    
+    public static void resetNodes(boolean moving) {    
         nodeList.clear();
         Random rnd = new Random();
         if (GRID) {
             int i = 0;
             for (double x = -3; x <= 3; x++) {
                 for (double y = -3; y <= 3; y++) {                      
-                    nodeArray[i] = new Node(x*WINDOW_WIDTH/9, y*WINDOW_HEIGHT/7, 0, 0);
+                    nodeArray[i] = new Node(x*WINDOW_WIDTH/9, y*WINDOW_HEIGHT/7, moving ? rnd.nextDouble()*100-50 : 0, moving ? rnd.nextDouble()*100-50 : 0);
                     nodeList.add(nodeArray[i]);                             
                     i++;
                 }
@@ -59,7 +59,7 @@ public class Application {
         }        
         else {
             for (int i = 0; i < nodeArray.length; i++) {
-                nodeArray[i] = new Node(rnd.nextDouble()*WINDOW_WIDTH - WINDOW_WIDTH/2, rnd.nextDouble()*WINDOW_HEIGHT - WINDOW_HEIGHT/2, rnd.nextDouble()*100-50, rnd.nextDouble()*100-50);
+                nodeArray[i] = new Node(rnd.nextDouble()*WINDOW_WIDTH - WINDOW_WIDTH/2, rnd.nextDouble()*WINDOW_HEIGHT - WINDOW_HEIGHT/2, moving ? rnd.nextDouble()*100-50 : 0, moving ? rnd.nextDouble()*100-50 : 0);
                 nodeList.add(nodeArray[i]);                             
             }
         }
@@ -101,7 +101,7 @@ public class Application {
         gc.setStroke(Color.WHITE);
         gc.setFont(new Font("Arial", 14));       
 
-        resetNodes();
+        resetNodes(false);
         new AnimationTimer() {
             @Override
             public void handle(long now) {
@@ -115,46 +115,36 @@ public class Application {
                 for(KeyCode k : keysPressed) {
                     if (k == KeyCode.ESCAPE) Application.terminate();
 
-                    if (k == KeyCode.SPACE) {
-                        resetNodes();
-                    }
+                    if (k == KeyCode.SPACE) resetNodes(false);
+                    if (k == KeyCode.ENTER) resetNodes(true);
 
                     if (k == KeyCode.A) { ASTAR = true; }
                     if (k == KeyCode.D) { ASTAR = false; }
+
                     if (k == KeyCode.G) { GRID = true; }
                     if (k == KeyCode.R) { GRID = false; }
 
-                    if (k == KeyCode.ENTER) {
-                        Random rnd = new Random();
-                        for (int i = 0; i < nodeArray.length; i++) {
-                            nodeArray[i].dx = rnd.nextDouble()*100-50;
-                            nodeArray[i].dy = rnd.nextDouble()*100-50;                  
-
-                        }
-                    }
                 }
-
                 /* PROCESS */
                 for (Node node : nodeList) {
                     node.update(fr.getFrameLength());
-                    if (!GRID) node.edges.clear();
+                    node.edges.clear();
                 }
 
-                if (!GRID) {
-                    ArrayList<Double> distances = new ArrayList<>();                
-                    for (Node node : nodeList) {
-                        distances.clear();
-                        for (Node other : nodeList) {
-                            if (node == other) continue;
-                            double d = Node.distance(node, other);
-                            distances.add(d);
-                        }
-                        Collections.sort(distances);
-                        for (Node other : nodeList) {
-                            double d = Node.distance(node, other);
-                            if (d <= distances.get(JOIN_COUNT - 1)) {
-                                node.addEdge(other);
-                            }
+                ArrayList<Double> distances = new ArrayList<>();                
+                for (Node node : nodeList) {
+                    distances.clear();
+                    for (Node other : nodeList) {
+                        if (node == other) continue;
+                        double d = Node.distance(node, other);
+                        distances.add(d);
+                    }
+                    Collections.sort(distances);
+                    for (Node other : nodeList) {
+                        double d = Node.distance(node, other);
+                        if (d <= distances.get(JOIN_COUNT - 1)) {
+                            if (GRID && d > MAX_GRID_DISTANCE) continue;
+                            node.addEdge(other);
                         }
                     }
                 }
@@ -162,18 +152,20 @@ public class Application {
                 for (Node node : nodeList) {
                     node.checked = false;
                     node.value = Double.MAX_VALUE;
-                    node.heuristicValue = Node.distance(node, nodeArray[0]);
+                    node.heuristicValue = Node.distance(node, nodeArray[nodeArray.length - 1]);
                 }
                 nodeArray[0].value = 0;
                 Node node = nodeArray[0];
 
                 if (ASTAR) {
                     do {
-                        for (Node child : node.edges.keySet()) {
-                            if (!child.checked) {
-                                double d = node.value + Node.distance(node, child);
-                                if (d < child.value) {
-                                    child.value = d;                                        
+                        if (node.edges != null) {
+                            for (Node child : node.edges.keySet()) {
+                                if (!child.checked) {
+                                    double d = node.value + Node.distance(node, child);
+                                    if (d < child.value) {
+                                        child.value = d;                                        
+                                    }
                                 }
                             }
                         }
@@ -259,23 +251,20 @@ public class Application {
                     if (n == nodeArray[0]) gc.setFill(Color.LIME);
                     else if (n == nodeArray[nodeArray.length - 1]) gc.setFill(Color.RED);   
                     else if (path.containsKey(n)) gc.setFill(Color.YELLOW);
-                    else if (n.checked && ASTAR) gc.setFill(Color.CYAN);
+                    else if (!n.checked && ASTAR) gc.setFill(Color.NAVY);
                     else gc.setFill(Color.BLUE);
                     gc.fillOval(n.x*scale-NODE_RADIUS*scale + centreX, n.y*scale-NODE_RADIUS*scale + centreY, NODE_RADIUS*2*scale, NODE_RADIUS*2*scale);
-                    gc.setStroke(Color.WHITE);
                     gc.setLineWidth(1);
-                    if (n.value != Double.MAX_VALUE) {
-                        gc.strokeText(Integer.toString((int) n.value), n.x*scale + centreX, n.y*scale + centreY);
-                        if (ASTAR) {
+                    if (!ASTAR || (ASTAR && n.checked)) {
+                        if (n.value != Double.MAX_VALUE) {
+                            gc.setStroke(Color.WHITE);
+                            gc.strokeText(Integer.toString((int) n.value), n.x*scale + centreX, n.y*scale + centreY);
                             gc.setStroke(Color.YELLOW);
                             gc.strokeText(Integer.toString((int) (n.value + n.heuristicValue)), n.x*scale + centreX, n.y*scale + centreY - 20);
                         }
-                    }
-                    else {
-                        gc.strokeText("∞", n.x*scale + centreX, n.y*scale + centreY); 
-                    }
-                    if (ASTAR) {
-
+                        else {
+                            gc.strokeText("∞", n.x*scale + centreX, n.y*scale + centreY); 
+                        }
                         gc.setStroke(Color.LIME);
                         gc.strokeText(Integer.toString((int) n.heuristicValue), n.x*scale + centreX, n.y*scale + centreY + 20);
                     }
@@ -283,16 +272,11 @@ public class Application {
 
                 gc.setStroke(Color.WHITE);
                 gc.setLineWidth(1);    
-                if (GRID) {
-                    gc.strokeText("[G/R] GRID", 20, 20);
-                } else {
-                    gc.strokeText("[G/R] RANDOM", 20, 20);
-                }
 
                 if (ASTAR) {
-                    gc.strokeText("[A/D] A STAR", 20, 40);
+                    gc.strokeText("[A/D] A STAR", 20, 20);
                 } else {
-                    gc.strokeText("[A/D] DIJKSTRA", 20, 40);
+                    gc.strokeText("[A/D] DIJKSTRA", 20, 20);
                 }
 
                 fr.updateFPS(now, gc, false);
