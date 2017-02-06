@@ -126,7 +126,7 @@ public class Application {
                     }
                     Collections.sort(distances);
                     for (Node other : nodeList) {
-                        if (Node.distance(node, other) < distances.get(JOIN_COUNT - 1)) {
+                        if (Node.distance(node, other) < distances.get(JOIN_COUNT)) {
                             node.addEdge(other);
                         }
                     }
