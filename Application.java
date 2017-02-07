@@ -19,12 +19,12 @@ import java.util.Collections;
 
 public class Application {
 
-    public static final int WINDOW_WIDTH = 1920;
-    public static final int WINDOW_HEIGHT = 1080;
+    public static final int WINDOW_WIDTH = 1280;
+    public static final int WINDOW_HEIGHT = 1024;
 
     public static final double NODE_RADIUS = 15;
-    public static final int NODE_COUNT = 49;
-    public static final int JOIN_COUNT = 8;    
+    public static final int NODE_COUNT = 80;
+    public static final int JOIN_COUNT = 5;    
 
     public static final boolean BOUNCE = true;
     public static final boolean WRAP = false;
@@ -259,14 +259,18 @@ public class Application {
                         if (n.value != Double.MAX_VALUE) {
                             gc.setStroke(Color.WHITE);
                             gc.strokeText(Integer.toString((int) n.value), n.x*scale + centreX, n.y*scale + centreY);
-                            gc.setStroke(Color.YELLOW);
-                            gc.strokeText(Integer.toString((int) (n.value + n.heuristicValue)), n.x*scale + centreX, n.y*scale + centreY - 20);
+                            if (ASTAR) {
+                                gc.setStroke(Color.YELLOW);
+                                gc.strokeText(Integer.toString((int) (n.value + n.heuristicValue)), n.x*scale + centreX, n.y*scale + centreY - 20);
+                            }
                         }
                         else {
                             gc.strokeText("∞", n.x*scale + centreX, n.y*scale + centreY); 
                         }
-                        gc.setStroke(Color.LIME);
-                        gc.strokeText(Integer.toString((int) n.heuristicValue), n.x*scale + centreX, n.y*scale + centreY + 20);
+                        if (ASTAR) {
+                            gc.setStroke(Color.LIME);
+                            gc.strokeText(Integer.toString((int) n.heuristicValue), n.x*scale + centreX, n.y*scale + centreY + 20);
+                        }
                     }
                 }    
 
