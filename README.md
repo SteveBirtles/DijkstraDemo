@@ -1,1 +1,1 @@
-# JavaFX Canvas (simplied from JavaFX Space Invaders)
+# JavaFX Canvas demo of Dijkstra's algorithm
